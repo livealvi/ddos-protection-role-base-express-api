@@ -17,6 +17,10 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  autoApprove: {
+    type: Boolean,
+    default: false,
+  },
   approveDate: {
     type: Date,
   },
@@ -30,9 +34,24 @@ const UserSchema = new mongoose.Schema({
   url: {
     type: String,
   },
-  tag: {
-    type: String,
+  badge: {
+    type: mongoose.Types.ObjectId,
+    ref: "Badge",
   },
+  editRequest: {
+    type: Boolean,
+    default: false,
+  },
+  approveBadge: {
+    type: Boolean,
+    default: false,
+  },
+  tag: [
+    {
+      type: mongoose.Types.ObjectId,
+      ref: "Tag",
+    },
+  ],
   createdAt: {
     type: Date,
     default: Date.now,

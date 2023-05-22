@@ -1,7 +1,10 @@
 const createError = require("http-errors");
 const Page = require("../../models/page/page");
+const User = require("../../models/user/user");
+const Tiles = require("../../models/tile/tile");
+const PageRequest = require("../../models/page/pageRequest");
 const errorFormatter = require("../../utils/validationErrorFormatter");
-const { validationResult, check } = require("express-validator");
+const { validationResult } = require("express-validator");
 
 const add = async (req, res, next) => {
   try {
@@ -24,10 +27,16 @@ const add = async (req, res, next) => {
       createdBy,
     } = req.body;
     alreadyExist = await Page.findOne({ title: title });
+    checkUser = await User.findOne({ _id: createdBy }).populate(
+      "role",
+      "name _id"
+    );
+    checkUserId = checkUser._id.toString();
     urlCheck = await Page.findOne({ url: url });
     if (urlCheck) {
       throw createError(400, "url is already taken");
     }
+
     let add = [];
     if (alreadyExist === null || alreadyExist.length == 0) {
       add = new Page({
@@ -39,6 +48,13 @@ const add = async (req, res, next) => {
         icon: icon,
         favIcon: favIcon,
         createdBy: createdBy,
+        color: "#EB5757",
+        approve: checkUser.autoApprove === true ? true : false,
+        approveDate: checkUser.autoApprove === true ? Date.now() : null,
+        assignTo:
+          checkUser.role.name === "partner" && checkUserId === createdBy
+            ? createdBy
+            : null,
       });
     } else {
       return next(createError(400, "page is already exist"));
@@ -57,15 +73,21 @@ const pages = async (req, res, next) => {
     const pages = await Page.find({})
       .populate({
         path: "approvedBy",
-        select: "name",
+        select: "name _id",
       })
       .populate({
-        path: "createdBy",
-        select: "name",
+        path: "assignTo",
+        select: "name _id email",
+        populate: {
+          path: "badge",
+        },
+        populate: {
+          path: "tag",
+          select: "tag _id",
+        },
       })
       .populate({
         path: "orders",
-        options: { sort: { _id: -1 } },
       });
     if (pages === null || pages.length == 0) {
       throw createError(404, "NO DATA FOUND");
@@ -76,17 +98,22 @@ const pages = async (req, res, next) => {
   }
 };
 
-const pagesForSearch = async (req, res, next) => {
+const publicPage = async (req, res, next) => {
   try {
     const pages = await Page.find({ approve: true })
-      .select(
-        "title url description approve archive icon favIcon logo color backgroundImage"
-      )
+      .populate({
+        path: "approvedBy",
+        select: "name _id",
+      })
+      .populate({
+        path: "assignTo",
+        select: "name _id",
+        populate: {
+          path: "badge",
+        },
+      })
       .populate({
         path: "orders",
-        select:
-          "title url description logo backgroundImage buttonColor buttonTitle",
-        options: { sort: { _id: -1 } },
       });
     if (pages === null || pages.length == 0) {
       throw createError(404, "NO DATA FOUND");
@@ -103,15 +130,17 @@ const page = async (req, res, next) => {
     const page = await Page.findById({ _id: id })
       .populate({
         path: "approvedBy",
-        select: "name",
+        select: "name _id",
       })
       .populate({
-        path: "createdBy",
-        select: "name",
+        path: "assignTo",
+        select: "name _id",
+        populate: {
+          path: "badge",
+        },
       })
       .populate({
         path: "orders",
-        options: { sort: { _id: -1 } },
       });
     if (page === null || page.length == 0) {
       throw createError(404, "NO DATA FOUND");
@@ -128,15 +157,17 @@ const byURL = async (req, res, next) => {
     const page = await Page.findOne({ url: url })
       .populate({
         path: "approvedBy",
-        select: "name",
+        select: "name _id",
       })
       .populate({
-        path: "createdBy",
-        select: "name",
+        path: "assignTo",
+        select: "name _id",
+        populate: {
+          path: "badge",
+        },
       })
       .populate({
         path: "orders",
-        options: { sort: { _id: -1 } },
       });
     if (page === null || page.length == 0) {
       throw createError(404, "NO DATA FOUND");
@@ -232,6 +263,7 @@ const updateURL = async (req, res, next) => {
         },
         {
           url: url,
+          editRequest: false,
           updatedAt: Date.now(),
         }
       );
@@ -253,6 +285,8 @@ const updateURL = async (req, res, next) => {
         },
         {
           url: url,
+          editRequest: false,
+          updatedAt: Date.now(),
         }
       );
       if (updateURL === null || updateURL.length == 0) {
@@ -288,6 +322,7 @@ const updateTitle = async (req, res, next) => {
         },
         {
           title: title,
+          editRequest: false,
           updatedAt: Date.now(),
         }
       );
@@ -309,6 +344,8 @@ const updateTitle = async (req, res, next) => {
         },
         {
           title: title,
+          editRequest: false,
+          updatedAt: Date.now(),
         }
       );
       if (updateTitle === null || updateTitle.length == 0) {
@@ -319,6 +356,76 @@ const updateTitle = async (req, res, next) => {
         message: "Successfully, updated",
       });
     }
+  } catch (error) {
+    return next(createError(error));
+  }
+};
+
+const adminAssignPages = async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    let { createdBy, assignTo } = req.body;
+    const user = await User.findOne({
+      _id: createdBy,
+    }).populate("role", "name _id");
+    if (user.role.name === "partner") {
+      throw createError(404, "Error, updating");
+    }
+    const page = await Page.findByIdAndUpdate(
+      {
+        _id: id,
+      },
+      {
+        assignTo: assignTo,
+        updatedAt: Date.now(),
+      }
+    );
+    if (page === null || page.length == 0) {
+      throw createError(404, "Error, updating");
+    }
+    return res.status(200).json({
+      success: 1,
+      message: "Successfully, updated",
+    });
+  } catch (error) {
+    return next(createError(error));
+  }
+};
+
+const approve = async (req, res, next) => {
+  try {
+    let errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: 0,
+        status: 400,
+        message: errors.mapped(),
+      });
+    }
+    const id = req.params.id;
+    let { approve, approvedBy } = req.body;
+    const user = await User.findOne({
+      _id: approvedBy,
+    }).populate("role", "name _id");
+    if (user.role.name === "partner") {
+      throw createError(404, "Error, updating");
+    }
+    const page = await Page.findByIdAndUpdate(
+      {
+        _id: id,
+      },
+      {
+        approve: approve,
+        updatedAt: Date.now(),
+      }
+    );
+    if (page === null || page.length == 0) {
+      throw createError(404, "Error, updating");
+    }
+    return res.status(200).json({
+      success: 1,
+      message: "Successfully, updated",
+    });
   } catch (error) {
     return next(createError(error));
   }
@@ -346,6 +453,7 @@ const update = async (req, res, next) => {
       archive,
     } = req.body;
     alreadyExist = await Page.findById({ _id: id });
+
     if (alreadyExist._id.toString() === id) {
       const page = await Page.findByIdAndUpdate(
         {
@@ -357,10 +465,11 @@ const update = async (req, res, next) => {
           backgroundImage: backgroundImage,
           icon: icon,
           favIcon: favIcon,
-          approve: approve,
+          approve: approve === true ? true : false,
           approvedBy: approvedBy,
           approveDate: approve === true ? Date.now() : undefined,
           archive: archive,
+          editRequest: false,
           archiveDate: archive === true ? Date.now() : undefined,
           updatedAt: Date.now(),
         }
@@ -378,9 +487,192 @@ const update = async (req, res, next) => {
   }
 };
 
+const pageRequestList = async (req, res, next) => {
+  try {
+    const requestList = await PageRequest.find({})
+      .populate({
+        path: "requestBy",
+        select: "name _id email",
+        populate: {
+          path: "badge",
+        },
+      })
+      .populate({
+        path: "page",
+      });
+
+    if (requestList === null || requestList.length == 0) {
+      throw createError(404, "NO DATA FOUND");
+    }
+    return res.status(200).json({ success: 1, requestList });
+  } catch (error) {
+    return next(createError(error));
+  }
+};
+
+const pageRequestDelete = async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const request = await PageRequest.findByIdAndDelete({ _id: id });
+    if (request === null || request.length == 0) {
+      throw createError(404, "Error deleting");
+    }
+    return res
+      .status(200)
+      .json({ success: 1, message: "Successfully, deleted" });
+  } catch (error) {
+    return next(createError(error));
+  }
+};
+
+const makePageEditRequest = async (req, res, next) => {
+  try {
+    let errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: 0,
+        status: 400,
+        message: errors.mapped(),
+      });
+    }
+    const id = req.params.id;
+    const { page } = req.body;
+    pageRequestMatch = await PageRequest.findOne({ requestBy: id });
+    pageRequestUserID = pageRequestMatch?.requestBy?._id.toString();
+    if (pageRequestUserID == id) {
+      throw createError(404, "Error, already requested");
+    }
+    const add = await PageRequest({
+      page: page,
+      requestBy: id,
+    });
+    const pageRequest = await add.save();
+    if (pageRequest === null || pageRequest.length == 0) {
+      throw createError(404, "Error, insert");
+    }
+    return res.status(201).json({
+      success: 1,
+      message: "Successfully, inserted",
+    });
+  } catch (error) {
+    return next(createError(error));
+  }
+};
+
+const pageEditApprove = async (req, res, next) => {
+  try {
+    let errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: 0,
+        status: 400,
+        message: errors.mapped(),
+      });
+    }
+    const id = req.params.id;
+    const { approve } = req.body;
+    findPageRequest = await PageRequest.findById({ _id: id });
+    const pageID = findPageRequest.page._id.toString();
+    if (pageID && approve === true) {
+      const page = await Page.findByIdAndUpdate(
+        {
+          _id: pageID,
+        },
+        {
+          editRequest: true,
+          updatedAt: Date.now(),
+        }
+      );
+      if (page === null || page.length == 0) {
+        throw createError(404, "Error, updating");
+      }
+      const pageRequest = await PageRequest.findByIdAndDelete({ _id: id });
+      if (pageRequest === null || pageRequest.length == 0) {
+        throw createError(404, "Error deleting");
+      }
+      return res.status(200).json({
+        success: 1,
+        message: "Successfully, updated",
+      });
+    }
+  } catch (error) {
+    return next(createError(error));
+  }
+};
+
+const changeLogo = async (req, res, next) => {
+  try {
+    let errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: 0,
+        status: 400,
+        message: errors.mapped(),
+      });
+    }
+    const id = req.params.id;
+    let { logo } = req.body;
+    const page = await Page.findByIdAndUpdate(
+      {
+        _id: id,
+      },
+      {
+        logo: logo,
+        updatedAt: Date.now(),
+      }
+    );
+    if (page === null || page.length == 0) {
+      throw createError(404, "Error, updating");
+    }
+    return res.status(200).json({
+      success: 1,
+      message: "Successfully, updated",
+    });
+  } catch (error) {
+    return next(createError(error));
+  }
+};
+
+const changeBackgroundImage = async (req, res, next) => {
+  try {
+    let errors = validationResult(req).formatWith(errorFormatter);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: 0,
+        status: 400,
+        message: errors.mapped(),
+      });
+    }
+    const id = req.params.id;
+    let { backgroundImage, createdBy } = req.body;
+    const page = await Page.findByIdAndUpdate(
+      {
+        _id: id,
+      },
+      {
+        backgroundImage: backgroundImage,
+        updatedAt: Date.now(),
+      }
+    );
+    if (page === null || page.length == 0) {
+      throw createError(404, "Error, updating");
+    }
+    return res.status(200).json({
+      success: 1,
+      message: "Successfully, updated",
+    });
+  } catch (error) {
+    return next(createError(error));
+  }
+};
+
 const remove = async (req, res, next) => {
   try {
     const id = req.params.id;
+    const findPage = await Page.findById({ _id: id });
+    allTiles = findPage.orders;
+    const removePageReq = await PageRequest.findOneAndDelete({ page: id });
+    const tiles = await Tiles.deleteMany({ _id: allTiles });
     const page = await Page.findByIdAndDelete({ _id: id });
     if (page === null || page.length == 0) {
       throw createError(404, "Error deleting");
@@ -396,13 +688,21 @@ const remove = async (req, res, next) => {
 module.exports = {
   add,
   pages,
-  pagesForSearch,
+  publicPage,
   page,
   orders,
   byURL,
   setColorForButton,
   updateURL,
+  approve,
+  changeLogo,
+  changeBackgroundImage,
+  adminAssignPages,
   updateTitle,
   update,
+  pageRequestList,
+  pageEditApprove,
+  makePageEditRequest,
+  pageRequestDelete,
   remove,
 };

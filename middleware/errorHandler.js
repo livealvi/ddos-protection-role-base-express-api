@@ -1,10 +1,8 @@
 const createError = require("http-errors");
-
 // 404 not found
 function notFoundHandler(req, res, next) {
   next(createError(404, "Your requested content was not found!"));
 }
-
 // error occur
 function errorOccurHandler(err, req, res, next) {
   const statusCode = err.statusCode || 500;

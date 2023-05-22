@@ -1,5 +1,4 @@
 const express = require("express");
-const path = require("path");
 const cors = require("cors");
 const morgan = require("morgan");
 const morganMiddleware = require("./middleware/morgan.middleware");
@@ -43,39 +42,47 @@ app.get("/", (req, res) => {
   });
 });
 
-//public route
-//auth
+// public route
+// auth
 const auth = require("./routers/auth/auth");
 app.use("/api/auth", auth);
 
-//page
+// page
 const page = require("./routers/page/page");
 app.use("/api/page", page);
 
-//protected route
+// protected route
 // all router are secure from here
 app.use(passport.initialize());
 app.use(passport.authenticate("jwt", { session: false }));
 
-//user
+// user
 const user = require("./routers/user/user");
 app.use("/api/user", user);
 
-//role
+// tag
+const tag = require("./routers/tag/tag");
+app.use("/api/tag", tag);
+
+// role
 const role = require("./routers/role/role");
 app.use("/api/role", role);
 
-//tile
+// tile
 const tile = require("./routers/tile/tile");
 app.use("/api/tile", tile);
 
-//color
+// color
 const color = require("./routers/color/color");
 app.use("/api/color", color);
 
+// badge
+const badge = require("./routers/badge/bagde");
+app.use("/api/badge", badge);
+
 // 404 not found
 app.use(notFoundHandler);
-//error
+// error
 app.use(errorOccurHandler);
 
 // server

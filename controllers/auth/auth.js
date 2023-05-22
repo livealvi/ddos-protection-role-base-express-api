@@ -2,6 +2,7 @@ const createError = require("http-errors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../../models/user/user");
+const TAG = require("../../models/tag/tag");
 const crypto = require("crypto");
 const { v4: uuidv4 } = require("uuid");
 const { validationResult } = require("express-validator");
@@ -23,18 +24,25 @@ const signup = async (req, res, next) => {
     alreadyExist = await User.find({ email: email });
     let add = [];
     if (alreadyExist === null || alreadyExist.length == 0) {
+      const addTAG = new TAG({
+        tag: uuidv4(),
+      });
+      tagAdded = await addTAG.save();
+      const tagId = tagAdded?._id.toString();
       add = new User({
         name: name,
         email: email,
         password: hashedPassword,
         url: generatedURL,
-        tag: uuidv4(),
+        tag: tagId,
       });
     } else {
       return next(createError(400, "user already exist"));
     }
     const user = await add.save();
-    return res.status(201).json({ success: 1 });
+    return res
+      .status(201)
+      .json({ success: 1, message: "Successfully, an account created" });
   } catch (error) {
     return next(createError(error));
   }

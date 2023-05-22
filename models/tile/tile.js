@@ -19,6 +19,10 @@ const TileSchema = new mongoose.Schema({
   logo: {
     type: String,
   },
+  lock: {
+    type: Boolean,
+    default: false,
+  },
   backgroundImage: {
     type: String,
   },
@@ -42,6 +46,14 @@ const TileSchema = new mongoose.Schema({
     type: mongoose.Types.ObjectId,
     ref: "User",
     require: true,
+  },
+  assignTo: {
+    type: mongoose.Types.ObjectId,
+    ref: "User",
+    require: true,
+  },
+  publicUrl: {
+    type: String,
   },
   approvedBy: {
     type: mongoose.Types.ObjectId,

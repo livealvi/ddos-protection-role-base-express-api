@@ -38,6 +38,50 @@ const add = [
     .trim(),
 ];
 
+const adminAddTiles = [
+  body("title")
+    .isString()
+    .notEmpty()
+    .withMessage("title can not be empty")
+    .isLength({ min: 6 })
+    .withMessage("must be at least 6 chars long"),
+  body("description").isString().trim(),
+  body("logo")
+    .isString()
+    .notEmpty()
+    .withMessage("logo url can not be empty")
+    .trim(),
+  body("backgroundImage")
+    .isString()
+    .withMessage("logo url can not be empty")
+    .trim(),
+  body("createdBy")
+    .isString()
+    .trim()
+    .notEmpty()
+    .withMessage("createdBy can not be empty")
+    .trim(),
+  body("assignTo")
+    .isString()
+    .trim()
+    .notEmpty()
+    .withMessage("assignTo can not be empty")
+    .trim(),
+  body("page")
+    .isString()
+    .trim()
+    .notEmpty()
+    .withMessage("page can not be empty")
+    .trim(),
+  body("orders").trim(),
+  body("buttonColor").isString().trim(),
+  body("buttonTitle")
+    .isString()
+    .notEmpty()
+    .withMessage("button title can not be empty")
+    .trim(),
+];
+
 const update = [
   body("description")
     .isLength({ min: 35 })
@@ -48,6 +92,17 @@ const update = [
     .notEmpty()
     .withMessage("logo url can not be empty")
     .trim(),
+  body("lock").isBoolean().withMessage("lock must be a boolean"),
+  body("url")
+    .isString()
+    .optional({ nullable: true })
+    .trim()
+    .withMessage("url must be a string"),
+  body("publicUrl")
+    .isString()
+    .optional({ nullable: true })
+    .trim()
+    .withMessage("publicUrl must be a string"),
   body("backgroundImage").isString().trim(),
   body("approvedBy")
     .isString()
@@ -67,4 +122,5 @@ const update = [
 module.exports = {
   add,
   update,
+  adminAddTiles,
 };

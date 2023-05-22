@@ -36,6 +36,15 @@ const PageSchema = new mongoose.Schema({
     ref: "User",
     require: true,
   },
+  editRequest: {
+    type: Boolean,
+    default: false,
+  },
+  assignTo: {
+    type: mongoose.Types.ObjectId,
+    ref: "User",
+    require: true,
+  },
   approvedBy: {
     type: mongoose.Types.ObjectId,
     ref: "User",
