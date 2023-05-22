@@ -1,12 +1,12 @@
 {
-  "name": "jwt-rolebase-manager",
-  "version": "1.5.0",
+  "name": "ddos-protection-role-base-express-api",
+  "version": "2.0.0",
   "main": "app.js",
   "scripts": {
     "start:dev": "nodemon app.js",
     "start": "node app.js"
   },
-  "repository": "https://github.com/livealvi/jwt-rolebase-manager.git",
+  "repository": "https://github.com/livealvi/degen-api-expressjs.git",
   "author": "Alvi Hasan <livealvi@gmail.com>",
   "license": "MIT",
   "dependencies": {
@@ -14,6 +14,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
+    "express-rate-limit": "^6.7.0",
     "express-validator": "^6.15.0",
     "helmet": "^6.0.1",
     "http-errors": "^2.0.0",
