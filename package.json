@@ -6,7 +6,7 @@
     "start:dev": "nodemon app.js",
     "start": "node app.js"
   },
-  "repository": "https://github.com/livealvi/degen-api-expressjs.git",
+  "repository": "https://github.com/livealvi/ddos-protection-role-base-express-api.git",
   "author": "Alvi Hasan <livealvi@gmail.com>",
   "license": "MIT",
   "dependencies": {
